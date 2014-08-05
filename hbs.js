@@ -11,11 +11,19 @@
 define: false, process: false, window: false */
 define([
 //>>excludeStart('excludeHbs', pragmas.excludeHbs)
-'handlebars', 'underscore', 'i18nprecompile', 'json2'
+
+//The following line has been changed because it conflicts with the Handlebars shim with RequireJS - Omi
+//'Handlebars', 'underscore', 'i18nprecompile', 'json2'
+'handlebars', 'underscore', 'i18nprecompile'
+
 //>>excludeEnd('excludeHbs')
 ], function (
 //>>excludeStart('excludeHbs', pragmas.excludeHbs)
- Handlebars, _, precompile, JSON
+
+//The following line has been changed because it conflicts with the Handlebars shim with RequireJS - Omi
+// Handlebars, _, precompile, JSON
+Handlebars, _, precompile
+
 //>>excludeEnd('excludeHbs')
 ) {
 //>>excludeStart('excludeHbs', pragmas.excludeHbs)
@@ -144,6 +152,30 @@ define([
                 if ( statement && statement.type && statement.type === 'partial' ) {
                     res.push(statement.id.string);
                 }
+                
+                //The following if statement also adds support for the include helper by adding it as a dependency to load - Omi
+                if ( statement && statement.type && statement.type === 'mustache' && statement.id.string && statement.id.string === 'include') {
+                    
+                  if(statement.hash) {
+                      var icon = _.find(statement.hash.pairs, function(pair) { 
+                        return pair[0] === "icon";
+                      });
+                        
+                      if(icon) {
+                        //var u = config.hbs.templateLocation + "_" + icon[1].string;
+                        var u = icon[1].string;
+                        res.push(u);
+                      }
+                  }
+                  
+                  if(statement.params[0].string !== "icon") {
+                     var t = statement.params[0].string;
+                       res.push(t);
+                  }
+                
+                   
+                }
+                
                 if ( statement && statement.program && statement.program.statements ) {
                   recursiveNodeSearch( statement.program.statements, res );
                 }
@@ -202,7 +234,7 @@ define([
               prefix = prefix ? prefix+"." : "";
 
               var  newprefix = "", flag = false;
-
+             
               // loop through each statement
               _(statements).forEach(function ( statement ) {
                 var parts, part, sideways;
@@ -229,6 +261,11 @@ define([
                     _(statement.params).forEach(function(param) {
                       if ( _(paramsWithoutParts).contains(param.original) ) {
                         helpersres.push(statement.id.string);
+                      }
+                      
+                      //Add support for include+i18n helpers and the way we use it -Omi
+                      if (statement.id.string === "include" || statement.id.string === "i18n" ) {
+                          helpersres.push(statement.id.string);
                       }
 
                       parts = composeParts( param.parts );
@@ -265,7 +302,7 @@ define([
             function getExternalDeps( nodes ) {
               var res   = [];
               var helpersres = [];
-
+      
               if ( nodes && nodes.statements ) {
                 res = recursiveVarSearch( nodes.statements, [], undefined, helpersres );
               }
@@ -317,7 +354,7 @@ define([
                       debugOutputEnd   = "",
                       debugProperties = "",
                       metaObj, head, linkElem;
-
+                      
                   if ( depStr ) {
                     depStr = ",'hbs!" + depStr + "'";
                   }
@@ -384,7 +421,7 @@ define([
 
                   var mapping = disableI18n? false : _.extend( langMap, config.localeMapping ),
                       prec = precompile( text, mapping, { originalKeyFallback: (config.hbs || {}).originalKeyFallback });
-
+            
                   text = "/* START_TEMPLATE */\n" +
                          "define(['hbs','handlebars'"+depStr+helpDepStr+"], function( hbs, Handlebars ){ \n" +
                            "var t = Handlebars.template(" + prec + ");\n" +
@@ -447,7 +484,7 @@ define([
             if (disableI18n){
                 fetchAndRegister(false);
             } else {
-                fetchOrGetCached(parentRequire.toUrl((config.hbs && config.hbs.i18nDirectory ? config.hbs.i18nDirectory : i18nDirectory) + (config.locale || "en_us") + '.json'), function (langMap) {
+                fetchOrGetCached(parentRequire.toUrl((config.hbs && config.hbs.i18nDirectory ? config.hbs.i18nDirectory : i18nDirectory) + (config.locale || "en") + '.json'), function (langMap) {
                   fetchAndRegister(JSON.parse(langMap));
                 });
             }
